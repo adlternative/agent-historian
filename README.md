@@ -1,5 +1,7 @@
 # agent-historian
 
+English | [简体中文](README.zh-CN.md)
+
 Search and read your past **AI coding-agent conversation history** from the
 command line — so your agent can recover earlier research, commands, errors,
 and decisions instead of repeating work.
@@ -21,16 +23,32 @@ can check history *before* doing fresh research.
 
 ---
 
-## Why
+## Why this exists
 
-Agents often redo research they already did in an earlier session, because each
-session starts fresh. `agent-historian` gives them a cheap way to recall:
-"have I solved this before? what command did I run? what did we decide?"
+AI coding agents are mostly **stateless across sessions**. Every new chat starts
+from zero, so the agent happily redoes investigation it already finished
+yesterday — re-reading the same files, re-running the same commands, re-deriving
+the same conclusions. That wastes your time, your tokens, and your patience.
 
-Unlike approaches that try to *summarize* sessions with brittle regex (which
-breaks on non-English text and varied phrasing), `agent-historian` lets the
-agent **read the real text on demand**, using a progressive-disclosure
-workflow so it only pulls what it needs.
+`agent-historian` gives the agent (and you) a cheap, local way to ask:
+
+> *"Have I solved this before? What command did I run? Which file did we change?
+> What did we decide, and why?"*
+
+It deliberately **does not try to summarize** sessions with brittle heuristics
+(regex-based "accomplishment extraction" breaks on non-English text and on any
+phrasing it didn't anticipate). Instead it lets the agent **read the real text
+on demand**, using a progressive-disclosure workflow (`locate → orient → scan →
+read`) so only the relevant lines enter the context window.
+
+## Who it's for
+
+- **Developers** who switch between projects and sessions and want their agent to
+  remember prior work instead of starting over.
+- **AI coding agents** (OpenCode, Claude Code, Qoder, …) that should *check
+  history before doing fresh research* — wired up via the bundled Agent Skill.
+- **Tool builders** who want a small, dependency-free, read-only way to query
+  local agent transcripts across multiple tools through one interface.
 
 ---
 
@@ -161,6 +179,38 @@ and prefixes it with `[subagent …]`, so nothing is lost or duplicated.
    it to `ALL_SOURCES`.
 
 3. `npm run build`. That's it — every subcommand now works for your agent.
+
+---
+
+## A note on data formats
+
+`agent-historian` reads each agent's **local** session data: OpenCode's SQLite
+database and the per-session JSONL transcripts that Claude Code, Qoder, and
+similar CLIs persist on disk. These on-disk formats are largely **not officially
+documented**, so the readers are best-effort and may need updates across agent
+versions. Everything is strictly **read-only** — the tool never writes to any
+agent's data store.
+
+---
+
+## Credits & acknowledgements
+
+This project stands on the shoulders of others:
+
+- **[claude-historian](https://github.com/Vvkmnn/claude-historian-mcp)** by
+  [@Vvkmnn](https://github.com/Vvkmnn) — the original inspiration. The core idea
+  ("let the agent search its own past conversations so it stops repeating
+  research"), the *historian* framing, and the on-demand transcript-search
+  approach all trace back to it. `agent-historian` reimagines that idea as a
+  multi-agent, CLI-first, skill-driven tool.
+- The progressive-disclosure / "page, don't dump" philosophy is shared with
+  memory tools like **[claude-mem](https://github.com/thedotmack/claude-mem)**
+  and **[mem0](https://github.com/mem0ai/mem0)**, which informed the design.
+- The agents whose local history this reads — **[OpenCode](https://opencode.ai)**,
+  **[Claude Code](https://www.anthropic.com/claude-code)**, and
+  **[Qoder](https://qoder.com)** — for building tools worth remembering.
+
+If your project belongs here and isn't credited, please open an issue.
 
 ---
 
