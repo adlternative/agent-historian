@@ -22,6 +22,7 @@
  */
 import { ALL_SOURCES, selectSources } from './sources/registry.js';
 import { HistorySource, Part, Session } from './sources/types.js';
+import { installSkill, uninstallSkill, skillPath } from './skill-install.js';
 
 // ── stdout / EPIPE ──────────────────────────────────────────────────
 
@@ -396,6 +397,12 @@ Usage:
   ochist part <part_id> [--source N] [--json]
       Full untruncated content of a single part.
 
+  ochist skill install [--global|-g] [--copy]
+      Install the bundled agent-history skill into local agents.
+      (Standard alternative: npx skills add adlternative/agent-historian)
+  ochist skill uninstall [--global|-g]
+  ochist skill path
+
   ochist --help
 
 <session>/<part_id> accept: agent id, slug/prefix, or "latest".
@@ -407,6 +414,28 @@ Tip (avoid context bloat): pipe through shell tools, e.g.
   ochist show latest | grep -i error
   ochist part <id> | head -40
 `;
+
+function cmdSkill(args: Args): void {
+  const sub = args._[0];
+  const global = !!args.flags.global || !!args.flags.g;
+  switch (sub) {
+    case 'install':
+      return installSkill({ global, copy: !!args.flags.copy });
+    case 'uninstall':
+    case 'remove':
+      return uninstallSkill({ global });
+    case 'path':
+      return skillPath();
+    default:
+      throw new Error(
+        'usage: ochist skill <install|uninstall|path> [--global|-g] [--copy]\n' +
+          '  install    install the agent-history skill into local agents\n' +
+          '  uninstall  remove it\n' +
+          '  path       print the bundled skill directory\n' +
+          'Tip: the standard cross-agent installer is `npx skills add adlternative/agent-historian`.',
+      );
+  }
+}
 
 function main(): void {
   const argv = process.argv.slice(2);
@@ -420,6 +449,7 @@ function main(): void {
 
   try {
     if (cmd === 'sources') return cmdSources();
+    if (cmd === 'skill') return cmdSkill(args);
 
     const sources = selectSources(str(args.flags.source));
 

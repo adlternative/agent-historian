@@ -113,19 +113,38 @@ ochist part prt_xxxxx                                # read full message
 ## Use as an Agent Skill
 
 The repo includes a skill at [`skills/agent-history/SKILL.md`](skills/agent-history/SKILL.md)
-that teaches agents *when* and *how* to use `ochist`.
+that teaches agents *when* and *how* to use `ochist` — so they check history
+before doing fresh research.
 
-**OpenCode** — copy or symlink it into a skills directory:
+### Option A — `npx skills` (recommended, cross-agent)
+
+The standard community installer. No clone needed; works for OpenCode, Claude
+Code, Cursor, Codex, and more:
 
 ```bash
-mkdir -p ~/.config/opencode/skills
-ln -s "$(pwd)/skills/agent-history" ~/.config/opencode/skills/agent-history
+# Install into every detected agent, globally:
+npx skills add adlternative/agent-historian -g
+
+# Or target specific agents:
+npx skills add adlternative/agent-historian -s agent-history -a opencode -a claude-code -g
 ```
 
-**Claude Code** — likewise:
+### Option B — `ochist skill install` (version-locked to the CLI)
+
+If you already installed the CLI (`npm i -g agent-historian` / `npm link`), it
+can install its own bundled skill:
 
 ```bash
-mkdir -p ~/.claude/skills
+ochist skill install --global     # → ~/.claude/skills + ~/.config/opencode/skills
+ochist skill install              # project-local: ./.claude/skills + ./.agents/skills
+ochist skill uninstall --global   # remove
+ochist skill path                 # print the bundled skill dir
+```
+
+### Option C — manual symlink
+
+```bash
+mkdir -p ~/.claude/skills        # read by BOTH Claude Code and OpenCode
 ln -s "$(pwd)/skills/agent-history" ~/.claude/skills/agent-history
 ```
 

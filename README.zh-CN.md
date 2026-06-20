@@ -96,19 +96,35 @@ ochist part prt_xxxxx                                # 读完整消息
 ## 作为 Agent Skill 使用
 
 仓库内置了一个 skill：[`skills/agent-history/SKILL.md`](skills/agent-history/SKILL.md)，
-用于教 Agent *何时*以及*如何*使用 `ochist`。
+用于教 Agent *何时*以及*如何*使用 `ochist`——好让它在做新调研前先查历史。
 
-**OpenCode** —— 复制或软链到 skills 目录：
+### 方式 A —— `npx skills`（推荐，跨 Agent）
+
+社区标准安装器，无需 clone，支持 OpenCode、Claude Code、Cursor、Codex 等：
 
 ```bash
-mkdir -p ~/.config/opencode/skills
-ln -s "$(pwd)/skills/agent-history" ~/.config/opencode/skills/agent-history
+# 全局安装到所有探测到的 Agent：
+npx skills add adlternative/agent-historian -g
+
+# 或指定 Agent：
+npx skills add adlternative/agent-historian -s agent-history -a opencode -a claude-code -g
 ```
 
-**Claude Code** —— 同理：
+### 方式 B —— `ochist skill install`（与 CLI 版本锁定）
+
+如果你已经安装了 CLI（`npm i -g agent-historian` / `npm link`），它能安装自带的 skill：
 
 ```bash
-mkdir -p ~/.claude/skills
+ochist skill install --global     # → ~/.claude/skills + ~/.config/opencode/skills
+ochist skill install              # 项目级：./.claude/skills + ./.agents/skills
+ochist skill uninstall --global   # 移除
+ochist skill path                 # 打印内置 skill 目录
+```
+
+### 方式 C —— 手动软链
+
+```bash
+mkdir -p ~/.claude/skills        # Claude Code 和 OpenCode 都会读取这里
 ln -s "$(pwd)/skills/agent-history" ~/.claude/skills/agent-history
 ```
 
