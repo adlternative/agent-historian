@@ -8,11 +8,13 @@
 import { HistorySource } from './types.js';
 import { OpenCodeSource } from './opencode.js';
 import { ClaudeCodeSource } from './claudecode.js';
+import { QoderSource } from './qoder.js';
 
 /** Every known source, in priority order. */
 export const ALL_SOURCES: HistorySource[] = [
   new OpenCodeSource(),
   new ClaudeCodeSource(),
+  new QoderSource(),
 ];
 
 /** Look up a source by its `name`. */

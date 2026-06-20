@@ -9,8 +9,8 @@ Ships a small CLI (`ochist`) and an **Agent Skill** so agents like
 can check history *before* doing fresh research.
 
 - **Multi-agent.** Reads OpenCode (`opencode.db`) and Claude Code
-  (`~/.claude/projects/*.jsonl`) out of the box. Pluggable: add a new agent by
-  implementing one interface.
+  (`~/.claude/projects/*.jsonl`) out of the box, plus additional locally
+  detected agents. Pluggable: add a new agent by implementing one interface.
 - **Project- or global-scoped.** Searches default to the current project
   (current directory and below); `--global` widens to everything.
 - **Read-only.** Never modifies any data store.
