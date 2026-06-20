@@ -2,6 +2,10 @@
 
 English | [简体中文](README.zh-CN.md)
 
+[![npm](https://img.shields.io/npm/v/agent-historian?style=flat-square)](https://www.npmjs.com/package/agent-historian)
+[![skills.sh](https://skills.sh/b/adlternative/agent-historian)](https://skills.sh/adlternative/agent-historian)
+[![license](https://img.shields.io/npm/l/agent-historian?style=flat-square)](LICENSE)
+
 Search and read your past **AI coding-agent conversation history** from the
 command line — so your agent can recover earlier research, commands, errors,
 and decisions instead of repeating work.
@@ -55,12 +59,26 @@ read`) so only the relevant lines enter the context window.
 ## Install
 
 ```bash
+npm install -g agent-historian      # exposes the `ochist` command
+```
+
+Or run without installing:
+
+```bash
+npx agent-historian sources
+```
+
+<details>
+<summary>From source (for development)</summary>
+
+```bash
 git clone https://github.com/adlternative/agent-historian.git
 cd agent-historian
 npm install
 npm run build
-npm link          # exposes the `ochist` command globally
+npm link          # symlink `ochist` globally
 ```
+</details>
 
 Requires **Node ≥ 22.5** (for built-in `node:sqlite`).
 

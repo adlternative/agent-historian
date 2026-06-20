@@ -10,7 +10,8 @@
     "build": "tsc && chmod +x dist/cli.js",
     "start": "node dist/cli.js",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "engines": {
     "node": ">=22.5.0"
@@ -18,14 +19,29 @@
   "keywords": [
     "opencode",
     "claude-code",
+    "qoder",
     "ai-agent",
     "conversation-history",
     "session",
     "search",
     "cli",
-    "memory"
+    "memory",
+    "skill"
   ],
   "license": "MIT",
+  "author": "adlternative",
+  "homepage": "https://github.com/adlternative/agent-historian#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adlternative/agent-historian.git"
+  },
+  "bugs": {
+    "url": "https://github.com/adlternative/agent-historian/issues"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
   "files": [
     "dist/",
     "skills/",

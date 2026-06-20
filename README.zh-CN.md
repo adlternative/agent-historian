@@ -2,6 +2,10 @@
 
 [English](README.md) | 简体中文
 
+[![npm](https://img.shields.io/npm/v/agent-historian?style=flat-square)](https://www.npmjs.com/package/agent-historian)
+[![skills.sh](https://skills.sh/b/adlternative/agent-historian)](https://skills.sh/adlternative/agent-historian)
+[![license](https://img.shields.io/npm/l/agent-historian?style=flat-square)](LICENSE)
+
 在命令行里**搜索并阅读你过去的 AI 编码 Agent 会话历史**——让 Agent 能找回此前的调研、命令、报错与决策，而不是每次从头再来。
 
 项目提供一个小巧的 CLI（`ochist`）和一个 **Agent Skill**，让
@@ -39,12 +43,26 @@ AI 编码 Agent **大多在会话之间是无状态的**。每开一个新会话
 ## 安装
 
 ```bash
+npm install -g agent-historian      # 暴露 `ochist` 命令
+```
+
+或免安装直接运行：
+
+```bash
+npx agent-historian sources
+```
+
+<details>
+<summary>从源码安装（用于开发）</summary>
+
+```bash
 git clone https://github.com/adlternative/agent-historian.git
 cd agent-historian
 npm install
 npm run build
-npm link          # 将 `ochist` 命令暴露到全局
+npm link          # 将 `ochist` 软链到全局
 ```
+</details>
 
 需要 **Node ≥ 22.5**（用于内置的 `node:sqlite`）。
 
