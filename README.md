@@ -56,6 +56,79 @@ read`) so only the relevant lines enter the context window.
 
 ---
 
+## How it differs from memory / RAG / other approaches
+
+There are several ways to give an agent "memory." `agent-historian` is
+deliberately the simplest one — it doesn't build a memory, it **reads the
+ground truth you already have on disk**.
+
+| Approach | What it stores | Retrieval | Cost / setup | Faithfulness |
+| --- | --- | --- | --- | --- |
+| **agent-historian** | nothing — reads existing transcripts | lexical (grep/substring), on demand | zero index, zero deps, read-only | exact original text |
+| **Memory layers** (mem0, OpenMemory, MemGPT, "memory tools") | LLM-distilled facts/summaries it decides to save | semantic recall of *summaries* | needs a store + write step; can drift/hallucinate | lossy — a model's paraphrase |
+| **RAG / embeddings** (vector DB over chat logs) | chunked text + embedding vectors | semantic (vector similarity) | embedding model + vector DB + reindex pipeline | exact chunks, but needs infra & re-indexing |
+| **Built-in `--resume` / `--continue`** | the agent's own session files | reload one whole session into context | free, but no search | exact, but all-or-nothing |
+| **Auto-summary recall** (regex/heuristic "what did I accomplish") | extracted bullet points | keyword over summaries | cheap | brittle; breaks on non-English / unusual phrasing |
+
+### When to use which
+
+- **Use `agent-historian`** when you want to *find and re-read what actually
+  happened* — the exact command, error, diff, or decision — across past sessions
+  and across multiple agents, with no infra and no risk of a model rewriting
+  history. It's a **search tool over real transcripts**, not a memory.
+- **Add a memory layer (mem0, etc.)** when you want the agent to carry forward
+  *distilled preferences and durable facts* ("the user prefers pnpm", "deploys go
+  through staging") that should persist as structured knowledge.
+- **Use RAG/embeddings** when you need *semantic* recall over a large corpus and
+  can afford an embedding model + vector store + re-indexing.
+
+They're complementary: `agent-historian` answers *"show me the real thing I did,"*
+memory/RAG answer *"recall the gist of what I know."* Many setups use both —
+historian for exact recall, a memory layer for distilled facts.
+
+### Design choices that follow from this
+
+- **No embeddings, no index, no background process** — search is plain lexical
+  matching that runs on demand, so there's nothing to build, sync, or keep warm.
+- **Read-only** — it never writes a "memory," so it can't drift from or corrupt
+  the source of truth.
+- **Progressive disclosure** — instead of stuffing summaries into context, the
+  agent pages through results (`locate → orient → scan → read`) and pulls only
+  the exact lines it needs.
+
+---
+
+## Why CLI + Skill instead of an MCP server
+
+This started as an MCP server, then deliberately moved to a **CLI (`ochist`)
+plus an Agent Skill**. Reasons:
+
+- **The agent already has a shell.** With a CLI, the agent composes
+  `ochist grep … | head`, `| wc -l`, `| grep -i error`, `| jq` itself. An MCP
+  server would have to anticipate and hard-code every such option as tool
+  parameters. The shell *is* the query language.
+- **Context control belongs to the agent.** Paging/filtering with `head`/`grep`
+  lets the agent pull only what it needs. An MCP tool tends to return a fixed
+  blob; you re-implement pagination server-side and still over- or under-fetch.
+- **Zero resident cost.** An MCP server is a long-lived process attached to the
+  session (and its tool schemas occupy context every turn). The CLI runs only
+  when invoked — no daemon, no idle token overhead.
+- **A Skill teaches *when* and *how*.** MCP exposes *capabilities*; it doesn't
+  tell the agent the workflow. The bundled skill encodes "check history before
+  re-researching" and the `locate → orient → scan → read` recipe — guidance MCP
+  can't carry.
+- **Portable & inspectable.** One binary works in any agent that can run shell
+  commands, plus humans can run the exact same commands and see the exact output.
+  No transport, no protocol, no per-client wiring.
+- **Easy to extend.** Adding an agent or a flag is a normal code change; there's
+  no tool-schema/permission round-trip.
+
+MCP is a great fit for *capabilities an agent can't otherwise reach* (remote
+APIs, privileged actions). Here the data is **local files the agent can already
+read with a shell**, so a CLI + Skill is simpler, cheaper, and more flexible.
+
+---
+
 ## Install
 
 ```bash
