@@ -1,0 +1,40 @@
+{
+  "name": "agent-historian",
+  "version": "0.1.0",
+  "description": "Search and read past AI coding-agent conversation history (OpenCode, Claude Code, …) from the command line. Pluggable per-agent sources.",
+  "type": "module",
+  "bin": {
+    "ochist": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x dist/cli.js",
+    "start": "node dist/cli.js",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "keywords": [
+    "opencode",
+    "claude-code",
+    "ai-agent",
+    "conversation-history",
+    "session",
+    "search",
+    "cli",
+    "memory"
+  ],
+  "license": "MIT",
+  "files": [
+    "dist/",
+    "skills/",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0"
+  }
+}
