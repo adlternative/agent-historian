@@ -199,17 +199,26 @@ npx skills add adlternative/agent-historian -s agent-history -a opencode -a clau
 如果你已经安装了 CLI（`npm i -g agent-historian` / `npm link`），它能安装自带的 skill：
 
 ```bash
-ochist skill install --global     # → ~/.claude/skills + ~/.config/opencode/skills
-ochist skill install              # 项目级：./.claude/skills + ./.agents/skills
-ochist skill uninstall --global   # 移除
-ochist skill path                 # 打印内置 skill 目录
+ochist skill install --global       # → ~/.agents/skills（统一的跨-agent 位置，
+                                    #   OpenCode 会自动发现）
+ochist skill install --global --all # 扩散到所有已知位置：Claude Code、
+                                    #   ~/.config/opencode/skills、Qoder/QoderWork
+ochist skill install                # 项目级：./.agents/skills
+ochist skill uninstall --global     # 移除（加 --all 清理所有位置）
+ochist skill path                   # 打印内置 skill 目录
 ```
+
+默认的全局安装只会往 `~/.agents/skills` 放一份——这是 OpenCode（以及其他识别
+`.agents` 的工具）会发现的统一共享位置，避免在机器上散落多个副本。如果还需要
+覆盖 Claude Code（它目前只读 `~/.claude/skills`）或其他 agent，再加 `--all`。
 
 ### 方式 C —— 手动软链
 
 ```bash
-mkdir -p ~/.claude/skills        # Claude Code 和 OpenCode 都会读取这里
-ln -s "$(pwd)/skills/agent-history" ~/.claude/skills/agent-history
+mkdir -p ~/.agents/skills        # 统一的跨-agent skill 位置
+ln -s "$(pwd)/skills/agent-history" ~/.agents/skills/agent-history
+# Claude Code 目前不读 ~/.agents/skills —— 如需覆盖它,再加一份:
+# ln -s "$(pwd)/skills/agent-history" ~/.claude/skills/agent-history
 ```
 
 重启 Agent；当你提到此前的工作时（“我之前……”“what did we do before”……），它会发现 `agent-history` 这个 skill 并按需加载。

@@ -270,17 +270,27 @@ If you already installed the CLI (`npm i -g agent-historian` / `npm link`), it
 can install its own bundled skill:
 
 ```bash
-ochist skill install --global     # → ~/.claude/skills + ~/.config/opencode/skills
-ochist skill install              # project-local: ./.claude/skills + ./.agents/skills
-ochist skill uninstall --global   # remove
-ochist skill path                 # print the bundled skill dir
+ochist skill install --global       # → ~/.agents/skills (the unified, cross-agent
+                                    #   location discovered by OpenCode)
+ochist skill install --global --all # fan out to every known location: Claude Code,
+                                    #   ~/.config/opencode/skills, and Qoder/QoderWork
+ochist skill install                # project-local: ./.agents/skills
+ochist skill uninstall --global     # remove (add --all to clear every location)
+ochist skill path                   # print the bundled skill dir
 ```
+
+By default the global install drops a single copy into `~/.agents/skills` — the
+modern shared location that OpenCode (and other `.agents`-aware tools) discover —
+instead of scattering duplicate copies across the machine. Use `--all` when you
+also need Claude Code (which only reads `~/.claude/skills`) or other agents.
 
 ### Option C — manual symlink
 
 ```bash
-mkdir -p ~/.claude/skills        # read by BOTH Claude Code and OpenCode
-ln -s "$(pwd)/skills/agent-history" ~/.claude/skills/agent-history
+mkdir -p ~/.agents/skills        # unified, cross-agent skills location
+ln -s "$(pwd)/skills/agent-history" ~/.agents/skills/agent-history
+# Claude Code does not read ~/.agents/skills yet — for it, also:
+# ln -s "$(pwd)/skills/agent-history" ~/.claude/skills/agent-history
 ```
 
 Restart the agent; it will discover the `agent-history` skill and load it on

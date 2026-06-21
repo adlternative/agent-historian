@@ -404,10 +404,13 @@ Usage:
   ochist part <part_id> [--source N] [--json]
       Full untruncated content of a single part.
 
-  ochist skill install [--global|-g] [--copy]
+  ochist skill install [--global|-g] [--all] [--copy]
       Install the bundled agent-history skill into local agents.
+      Default global target is the unified ~/.agents/skills (one location,
+      discovered by OpenCode). Add --all to also install into Claude Code,
+      ~/.config/opencode/skills, and Qoder/QoderWork.
       (Standard alternative: npx skills add adlternative/agent-historian)
-  ochist skill uninstall [--global|-g]
+  ochist skill uninstall [--global|-g] [--all]
   ochist skill path
 
   ochist stats [--json]
@@ -429,20 +432,24 @@ Tip (avoid context bloat): pipe through shell tools, e.g.
 function cmdSkill(args: Args): void {
   const sub = args._[0];
   const global = !!args.flags.global || !!args.flags.g;
+  const all = !!args.flags.all;
   switch (sub) {
     case 'install':
-      return installSkill({ global, copy: !!args.flags.copy });
+      return installSkill({ global, all, copy: !!args.flags.copy });
     case 'uninstall':
     case 'remove':
-      return uninstallSkill({ global });
+      return uninstallSkill({ global, all });
     case 'path':
       return skillPath();
     default:
       throw new Error(
-        'usage: ochist skill <install|uninstall|path> [--global|-g] [--copy]\n' +
+        'usage: ochist skill <install|uninstall|path> [--global|-g] [--all] [--copy]\n' +
           '  install    install the agent-history skill into local agents\n' +
+          '             (default global target: unified ~/.agents/skills)\n' +
           '  uninstall  remove it\n' +
           '  path       print the bundled skill directory\n' +
+          '  --all      fan out to every known location (Claude Code,\n' +
+          '             ~/.config/opencode/skills, Qoder, QoderWork)\n' +
           'Tip: the standard cross-agent installer is `npx skills add adlternative/agent-historian`.',
       );
   }
