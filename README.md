@@ -56,6 +56,27 @@ read`) so only the relevant lines enter the context window.
 
 ---
 
+## A real example: resolving a recurring merge conflict
+
+Some merge conflicts aren't meant to be hand-edited. A `go.sum` conflict, a
+lockfile, a generated file — the right fix is usually a command
+(`go mod tidy`, regenerate, take-theirs-then-rebuild), not manual editing.
+
+In an earlier session I'd told the agent the exact command to resolve a
+particular repo's `go.sum` conflicts. A new session later, the agent **forgot**,
+tried to hand-merge it, and got it wrong. I asked it to check `agent-history` for
+how we did it last time — it found the previous session, saw the command, and
+immediately did the right thing.
+
+Why a memory layer wouldn't have caught this: **the agent only remembers what it
+decided to write down.** Unless I had consciously told it "remember this fix" the
+last time, that detail never makes it into a memory store. The local session
+transcript, on the other hand, **always has it** — every command and its output
+is there whether or not anyone thought it was worth saving. `agent-historian`
+just reads that ground truth back.
+
+---
+
 ## How it differs from memory / RAG / other approaches
 
 There are several ways to give an agent "memory." `agent-historian` is
