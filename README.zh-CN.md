@@ -199,7 +199,8 @@ npx skills add adlternative/agent-historian -s agent-history -a opencode -a clau
 如果你已经安装了 CLI（`npm i -g agent-historian` / `npm link`），它能安装自带的 skill：
 
 ```bash
-ochist skill install --global     # → ~/.claude/skills + ~/.config/opencode/skills
+ochist skill install --global     # → ~/.claude/skills、~/.config/opencode/skills，
+                                  #   以及（若已安装）~/.qoder(work)/skills
 ochist skill install              # 项目级：./.claude/skills + ./.agents/skills
 ochist skill uninstall --global   # 移除
 ochist skill path                 # 打印内置 skill 目录

@@ -37,14 +37,32 @@ interface Target {
   dir: string;
 }
 
-/** Skill destination dirs for the chosen scope. */
+/**
+ * Skill destination dirs for the chosen scope.
+ *
+ * Claude Code and OpenCode dirs are always included. Other agents (Qoder CLI,
+ * QoderWork) are added only when their data directory already exists, so we
+ * don't scatter skills for products you don't use.
+ */
 function targets(global: boolean): Target[] {
+  const home = homedir();
+
   if (global) {
-    return [
-      { label: 'Claude Code + OpenCode (~/.claude/skills)', dir: join(homedir(), '.claude', 'skills') },
-      { label: 'OpenCode (~/.config/opencode/skills)', dir: join(homedir(), '.config', 'opencode', 'skills') },
+    const t: Target[] = [
+      { label: 'Claude Code + OpenCode (~/.claude/skills)', dir: join(home, '.claude', 'skills') },
+      { label: 'OpenCode (~/.config/opencode/skills)', dir: join(home, '.config', 'opencode', 'skills') },
     ];
+    // Optional agents — include only if installed.
+    const optional: { base: string; label: string; dir: string }[] = [
+      { base: join(home, '.qoderwork'), label: 'QoderWork (~/.qoderwork/skills)', dir: join(home, '.qoderwork', 'skills') },
+      { base: join(home, '.qoder'), label: 'Qoder (~/.qoder/skills)', dir: join(home, '.qoder', 'skills') },
+    ];
+    for (const o of optional) {
+      if (existsSync(o.base)) t.push({ label: o.label, dir: o.dir });
+    }
+    return t;
   }
+
   return [
     { label: 'Claude Code (.claude/skills)', dir: join(process.cwd(), '.claude', 'skills') },
     { label: 'OpenCode/agents (.agents/skills)', dir: join(process.cwd(), '.agents', 'skills') },

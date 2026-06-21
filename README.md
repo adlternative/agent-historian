@@ -270,7 +270,8 @@ If you already installed the CLI (`npm i -g agent-historian` / `npm link`), it
 can install its own bundled skill:
 
 ```bash
-ochist skill install --global     # → ~/.claude/skills + ~/.config/opencode/skills
+ochist skill install --global     # → ~/.claude/skills, ~/.config/opencode/skills,
+                                  #   and ~/.qoder(work)/skills if those agents exist
 ochist skill install              # project-local: ./.claude/skills + ./.agents/skills
 ochist skill uninstall --global   # remove
 ochist skill path                 # print the bundled skill dir
