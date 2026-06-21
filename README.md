@@ -288,6 +288,23 @@ demand when you reference earlier work ("我之前…", "what did we do before",
 
 ---
 
+## Usage stats
+
+Want to know how often the agent actually reaches for history (i.e. how often the
+skill turns into a real call)? Every `ochist` run appends one line of **metadata
+only** to `~/.agent-historian/usage.log` — timestamp, subcommand, whether a query
+was used, scope. It records **no query text, no results, no paths**, and never
+touches the network.
+
+```bash
+ochist stats            # human-readable summary (totals, by command, by day)
+ochist stats --json     # machine-readable
+```
+
+Opt out entirely with `AGENT_HISTORIAN_NO_TELEMETRY=1` (or `DO_NOT_TRACK=1`).
+
+---
+
 ## How it works
 
 ```

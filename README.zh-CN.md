@@ -216,6 +216,19 @@ ln -s "$(pwd)/skills/agent-history" ~/.claude/skills/agent-history
 
 ---
 
+## 使用统计
+
+想知道 Agent 到底多频繁地去查历史（也就是 skill 多少次真正变成了一次调用）？每次运行 `ochist` 都会往 `~/.agent-historian/usage.log` 追加一行**仅含元数据**的记录——时间戳、子命令、是否带 query、范围。它**不记录 query 文本、不记录结果、不记录路径**，也绝不联网。
+
+```bash
+ochist stats            # 人类可读的汇总（总数、按命令、按天）
+ochist stats --json     # 机器可读
+```
+
+完全关闭：设 `AGENT_HISTORIAN_NO_TELEMETRY=1`（或 `DO_NOT_TRACK=1`）。
+
+---
+
 ## 工作原理
 
 ```

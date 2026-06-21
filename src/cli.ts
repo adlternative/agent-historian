@@ -23,6 +23,7 @@
 import { ALL_SOURCES, selectSources } from './sources/registry.js';
 import { HistorySource, Part, Session } from './sources/types.js';
 import { installSkill, uninstallSkill, skillPath } from './skill-install.js';
+import { recordUsage, printStats } from './usage.js';
 
 // ── stdout / EPIPE ──────────────────────────────────────────────────
 
@@ -403,6 +404,10 @@ Usage:
   ochist skill uninstall [--global|-g]
   ochist skill path
 
+  ochist stats [--json]
+      Local usage summary: how often ochist was invoked (metadata only,
+      no query text). Opt out with AGENT_HISTORIAN_NO_TELEMETRY=1.
+
   ochist --help
 
 <session>/<part_id> accept: agent id, slug/prefix, or "latest".
@@ -447,7 +452,19 @@ function main(): void {
   const cmd = argv[0];
   const args = parseArgs(argv.slice(1));
 
+  // Record this invocation (metadata only; never query text/results).
+  // `stats` is excluded so checking the numbers doesn't inflate them.
+  if (cmd !== 'stats') {
+    recordUsage({
+      cmd,
+      hasQuery: args._.length > 0,
+      source: str(args.flags.source),
+      scope: args.flags.global || args.flags.g ? 'global' : undefined,
+    });
+  }
+
   try {
+    if (cmd === 'stats') return printStats(!!args.flags.json);
     if (cmd === 'sources') return cmdSources();
     if (cmd === 'skill') return cmdSkill(args);
 
