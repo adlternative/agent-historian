@@ -2,9 +2,6 @@
 name: agent-history
 description: Search and read past AI coding-agent conversation history (OpenCode, Claude Code, …) via the `ochist` CLI. Use this BEFORE doing fresh research, web searches, or codebase exploration when the user references earlier work — e.g. "what did I do before", "我之前", "上次", "earlier session", "we already discussed/configured/decided", "recall", "find that command/error/decision from a previous chat". Locates prior sessions across all installed agents, greps their content, and reads full message text on demand, paging with shell tools to avoid context bloat.
 license: MIT
-metadata:
-  audience: all-agents
-  tool: ochist
 ---
 
 ## What this skill does
