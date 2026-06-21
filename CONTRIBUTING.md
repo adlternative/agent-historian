@@ -49,13 +49,27 @@ Keep sources **read-only** — never write to or mutate an agent's data store.
 
 ## Releasing (maintainers)
 
+Releases are automated via GitHub Actions. Just bump the version and push the tag:
+
 ```bash
-npm version <patch|minor|major>   # bumps package.json + creates a git tag
+npm version <patch|minor|major>   # bumps package.json + creates a vX.Y.Z tag
 git push --follow-tags
-npm publish                       # publishes to npmjs.org (public)
 ```
 
-`prepublishOnly` runs the build automatically. Publishing requires npm 2FA.
+Pushing a `v*` tag triggers `.github/workflows/release.yml`, which builds,
+verifies the tag matches `package.json`, runs `npm publish`, and creates a
+GitHub Release. No local `npm publish` / OTP needed.
+
+**One-time setup:** add an npm **Automation** access token (bypasses 2FA for CI)
+as the GitHub repo secret `NPM_TOKEN`
+(npmjs.com → Access Tokens → Generate → Automation; then
+`gh secret set NPM_TOKEN`).
+
+Manual fallback:
+
+```bash
+npm publish --registry=https://registry.npmjs.org   # requires npm login + 2FA
+```
 
 ## Code style
 
