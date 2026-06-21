@@ -129,6 +129,29 @@ read with a shell**, so a CLI + Skill is simpler, cheaper, and more flexible.
 
 ---
 
+## When this project becomes unnecessary (and that's fine)
+
+`agent-historian` mostly exists to fill a gap: agents persist rich session data
+locally, but **don't expose a first-class way to search and read it back**.
+OpenCode has `session list` (no message/part reader); Claude Code only has
+interactive `--resume`; Qoder's SDK can resume/continue but not read history.
+
+The cleanest end state is for the agents themselves to ship this:
+
+- A read command, e.g. `opencode message get <session>` / `opencode session show`
+  (and equivalents for Claude Code / Qoder) that prints messages and tool I/O as
+  plain, pipe-friendly text.
+- An **official skill** that teaches the agent to check its own history before
+  re-researching.
+
+If that happens, you won't need this project — and that would be a *good*
+outcome. Until then, `agent-historian` provides a uniform, read-only, cross-agent
+way to do it today. (And if it stays useful as the *cross-agent* layer — one tool
+that reads OpenCode + Claude Code + Qoder + … through one interface and one
+skill — that's a fine reason for it to stick around too.)
+
+---
+
 ## Install
 
 ```bash
