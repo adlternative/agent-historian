@@ -44,16 +44,22 @@ interface Args {
 function parseArgs(argv: string[]): Args {
   const _: string[] = [];
   const flags: Record<string, string | boolean> = {};
+  const isFlag = (s: string): boolean => /^-{1,2}[A-Za-z]/.test(s);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a.startsWith('--')) {
-      const key = a.slice(2);
+    // Long flag: --name [value]   Short flag: -x [value]
+    if (a.startsWith('--') || (a.startsWith('-') && a.length > 1 && /[A-Za-z]/.test(a[1]))) {
+      const key = a.startsWith('--') ? a.slice(2) : a.slice(1);
       const next = argv[i + 1];
-      if (next !== undefined && !next.startsWith('--')) {
+      if (next !== undefined && !isFlag(next)) {
         flags[key] = next;
         i++;
-      } else flags[key] = true;
-    } else _.push(a);
+      } else {
+        flags[key] = true;
+      }
+    } else {
+      _.push(a);
+    }
   }
   return { _, flags };
 }
