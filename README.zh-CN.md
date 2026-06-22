@@ -14,7 +14,7 @@
 
 - **多 Agent 支持。** 开箱即读 OpenCode（`opencode.db`）和 Claude Code
   （`~/.claude/projects/*.jsonl`），以及其他本地探测到的 Agent。可插拔：实现一个接口即可新增 Agent。
-- **项目级 / 全局级范围。** 搜索默认限定在当前项目（当前目录及其子目录）；`--global` 扩展到全部。
+- **项目级 / 全局级范围。** 搜索默认限定在当前项目（当前目录及其子目录，以及同仓库的其它 git worktree）；`--global` 扩展到全部，`--no-worktrees` 收窄到单一目录。
 - **只读。** 绝不修改任何数据存储。
 - **对上下文友好。** 纯文本、管道友好的输出。Agent 用
   `grep`/`head`/`wc`/`jq` 分页取用，而不是把整个会话灌进上下文。
@@ -154,10 +154,13 @@ ochist grep "docker build" --source opencode
 
 ### 项目级 vs 全局级范围
 
-`sessions` 和 `grep` 默认限定在**当前项目**——即工作目录为当前目录或其子目录的会话。按需扩展：
+`sessions` 和 `grep` 默认限定在**当前项目**——即工作目录为当前目录或其子目录的会话。
+同一仓库的其它 **git worktree（工作树）** 会被自动纳入，因此在主仓库目录下也能看到在
+关联 worktree 中产生的会话，反之亦然。按需调整：
 
 ```bash
-ochist sessions                 # 当前项目（当前目录及子目录）
+ochist sessions                 # 当前项目（当前目录、子目录及同仓库 worktree）
+ochist sessions --no-worktrees  # 严格模式：仅限当前目录
 ochist sessions --global        # 所有项目
 ochist sessions --dir ~/code/x  # 指定目录
 ochist grep "ssh" --global      # 搜索全部历史

@@ -25,11 +25,15 @@ Check history FIRST in these cases — it is cheaper than re-researching.
 
 ## Scope: project vs global
 
-`sessions` and `grep` default to the **current project** — only sessions whose
-working directory is the current directory or a subdirectory of it. To widen:
+`sessions` and `grep` default to the **current project** — sessions whose
+working directory is the current directory or a subdirectory of it. Sibling
+**git worktrees** of the same repo are included automatically, so a session run
+in a linked worktree still shows up from the main checkout (and vice versa).
+To widen or narrow:
 
 - `--global` / `-g` — search ALL sessions across every directory.
 - `--dir <path>` — scope to a specific directory instead of the cwd.
+- `--no-worktrees` — strict single-directory scope (don't expand to worktrees).
 
 Rule of thumb: start project-scoped (more relevant, less noise); if you find
 nothing, retry with `--global`.
@@ -52,11 +56,11 @@ Pipe through `grep`, `head`, `wc -l`, `awk`, `jq` to keep output small.
 ochist sources
     List known agents and whether each has data on this machine.
 
-ochist sessions [--source N] [--global|-g] [--dir PATH] [--limit N] [--json]
-    Recent sessions (current project by default).
+ochist sessions [--source N] [--global|-g] [--dir PATH] [--no-worktrees] [--limit N] [--json]
+    Recent sessions (current project by default; includes sibling worktrees).
     Columns: time<TAB>source<TAB>slug<TAB>id<TAB>dir<TAB>title
 
-ochist grep <pattern> [--source N] [--global|-g] [--dir PATH] [--session S] [--type text|tool|patch] [--limit N] [--json]
+ochist grep <pattern> [--source N] [--global|-g] [--dir PATH] [--no-worktrees] [--session S] [--type text|tool|patch] [--limit N] [--json]
     Search across part content (current project by default).
     Output: part_id<TAB>source<TAB>slug<TAB>tag<TAB>match
 

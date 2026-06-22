@@ -12,15 +12,16 @@
  *
  * Subcommands:
  *   sources
- *   sessions [--source N] [--dir S] [--limit N] [--json]
+ *   sessions [--source N] [--dir S] [--no-worktrees] [--limit N] [--json]
  *   meta <session> [--source N] [--json]
  *   show <session> [--source N] [--role R] [--type T] [--full] [--max N] [--json]
  *   part <part_id> [--source N] [--json]
- *   grep <pattern> [--source N] [--session S] [--dir S] [--type T] [--limit N] [--json]
+ *   grep <pattern> [--source N] [--session S] [--dir S] [--no-worktrees] [--type T] [--limit N] [--json]
  *
  * <session>/<part_id> accept agent-native ids, slugs/prefixes, or "latest".
  */
 import './quiet-warnings.js'; // must run before node:sqlite is loaded
+import { execFileSync } from 'node:child_process';
 import { ALL_SOURCES, selectSources } from './sources/registry.js';
 import { HistorySource, Part, Session } from './sources/types.js';
 import { installSkill, uninstallSkill, skillPath } from './skill-install.js';
@@ -79,12 +80,43 @@ function oneLine(s: string, n: number): string {
 }
 const tag = (p: Part): string => (p.kind === 'tool' ? `tool:${p.toolName}` : p.role);
 
+const stripSlash = (p: string): string => p.replace(/\/+$/, '');
+
+/**
+ * Resolve every working-tree root that belongs to the same git repository as
+ * `base` — the main worktree plus all linked worktrees. Sessions recorded in a
+ * sibling worktree share the same logical project, so project scope should
+ * include them.
+ *
+ * Returns an empty array when `base` is not inside a git repo (or git is
+ * unavailable); callers then fall back to plain `base` nesting.
+ */
+function gitWorktreeRoots(base: string): string[] {
+  try {
+    const out = execFileSync('git', ['worktree', 'list', '--porcelain'], {
+      cwd: base,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const roots: string[] = [];
+    for (const line of out.split('\n')) {
+      if (line.startsWith('worktree ')) roots.push(stripSlash(line.slice('worktree '.length)));
+    }
+    return roots;
+  } catch {
+    return [];
+  }
+}
+
 /**
  * Resolve the directory scope for project-vs-global filtering.
  *
- * Default = project scope: only sessions whose directory is the base dir or a
- * descendant of it. `--global`/`-g` disables filtering. `--dir <path>` sets an
- * explicit base dir (otherwise the current working directory is used).
+ * Default = project scope: sessions whose directory is the base dir or a
+ * descendant of it. The base dir is also expanded to cover every git worktree
+ * of the same repository, so sessions run in a sibling worktree are included.
+ * `--global`/`-g` disables filtering. `--dir <path>` sets an explicit base dir
+ * (otherwise the current working directory is used). `--no-worktrees` keeps the
+ * strict single-directory behavior.
  *
  * @returns A predicate over a session/part directory, or null for "no filter".
  */
@@ -93,19 +125,33 @@ function makeScopeFilter(args: Args): ((dir: string | undefined) => boolean) | n
   if (isGlobal) return null;
 
   const explicit = str(args.flags.dir);
-  const base = (explicit || process.cwd()).replace(/\/+$/, '');
-  // Match the base dir exactly or any path nested under it.
+  const base = stripSlash(explicit || process.cwd());
+
+  const noWorktrees = args.flags['no-worktrees'] === true || args.flags['no-worktrees'] === 'true';
+  const bases = noWorktrees ? [base] : worktreeBases(base);
+
+  // Match any base root exactly, or any path nested under one of them.
   return (dir) => {
     if (!dir) return false;
-    const d = dir.replace(/\/+$/, '');
-    return d === base || d.startsWith(base + '/');
+    const d = stripSlash(dir);
+    return bases.some((b) => d === b || d.startsWith(b + '/'));
   };
+}
+
+/** Base roots for project scope: `base` plus its sibling git worktrees. */
+function worktreeBases(base: string): string[] {
+  const roots = gitWorktreeRoots(base);
+  const set = new Set<string>([base, ...roots]);
+  return [...set];
 }
 
 /** Human label describing the active scope (for headers/diagnostics). */
 function scopeLabel(args: Args): string {
   if (args.flags.global || args.flags.g) return 'global';
-  const base = str(args.flags.dir) || process.cwd();
+  const base = stripSlash(str(args.flags.dir) || process.cwd());
+  const noWorktrees = args.flags['no-worktrees'] === true || args.flags['no-worktrees'] === 'true';
+  const bases = noWorktrees ? [base] : worktreeBases(base);
+  if (bases.length > 1) return `project:${base} (+${bases.length - 1} worktree${bases.length - 1 > 1 ? 's' : ''})`;
   return `project:${base}`;
 }
 
@@ -380,18 +426,19 @@ Sources: OpenCode (opencode.db), Claude Code (~/.claude/projects/*.jsonl), …
 By default ALL detected sources are queried. Restrict with --source NAME.
 
 Scope: 'sessions' and 'grep' default to the CURRENT PROJECT (sessions whose
-directory is the current working dir or below it). Use --global / -g to search
-everything, or --dir PATH to scope to a specific directory.
+directory is the current working dir or below it). Sibling git worktrees of the
+same repo are included automatically; pass --no-worktrees to disable that. Use
+--global / -g to search everything, or --dir PATH to scope to a specific dir.
 
 Usage:
   ochist sources
       List known sources and whether each is available on this machine.
 
-  ochist sessions [--source N] [--global|-g] [--dir PATH] [--limit N] [--json]
+  ochist sessions [--source N] [--global|-g] [--dir PATH] [--no-worktrees] [--limit N] [--json]
       List recent sessions (current project by default).
       Columns: time<TAB>source<TAB>slug<TAB>id<TAB>dir<TAB>title
 
-  ochist grep <pattern> [--source N] [--global|-g] [--dir PATH] [--session S] [--type text|tool|patch] [--limit N] [--json]
+  ochist grep <pattern> [--source N] [--global|-g] [--dir PATH] [--no-worktrees] [--session S] [--type text|tool|patch] [--limit N] [--json]
       Regex/substring search across part content (current project by default).
       Output: part_id<TAB>source<TAB>slug<TAB>tag<TAB>matched_line
 
