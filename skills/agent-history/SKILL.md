@@ -74,7 +74,7 @@ ochist part <part_id> [--source N] [--json]
     Full, untruncated content of a single part.
 ```
 
-`--source` values: `opencode`, `claudecode`, `qoder` (run `ochist sources` to see all).
+`--source` values: `opencode`, `claudecode`, `qoder`, `codex` (run `ochist sources` to see all).
 `<session>`/`<part_id>` accept: agent id, slug/prefix, or `latest`.
 
 ## Recommended workflow (copy these patterns)

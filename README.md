@@ -14,9 +14,11 @@ Ships a small CLI (`ochist`) and an **Agent Skill** so agents like
 [OpenCode](https://opencode.ai) and [Claude Code](https://www.anthropic.com/claude-code)
 can check history *before* doing fresh research.
 
-- **Multi-agent.** Reads OpenCode (`opencode.db`) and Claude Code
-  (`~/.claude/projects/*.jsonl`) out of the box, plus additional locally
-  detected agents. Pluggable: add a new agent by implementing one interface.
+- **Multi-agent.** Reads OpenCode (`opencode.db`), Claude Code
+  (`~/.claude/projects/*.jsonl`), Qoder, and Codex CLI
+  (`~/.codex/sessions/**/rollout-*.jsonl`) out of the box, plus additional
+  locally detected agents. Pluggable: add a new agent by implementing one
+  interface.
 - **Project- or global-scoped.** Searches default to the current project
   (current directory and below, plus sibling git worktrees of the same repo);
   `--global` widens to everything, `--no-worktrees` narrows to one directory.
@@ -336,6 +338,8 @@ ochist (CLI)
   └─ sources/registry.ts        selects active sources (auto-detect or --source)
        ├─ OpenCodeSource        reads opencode.db via node:sqlite
        ├─ ClaudeCodeSource      reads ~/.claude/projects/*.jsonl
+       ├─ QoderSource           reads ~/.qoder/projects/**/*.jsonl
+       ├─ CodexSource           reads ~/.codex/sessions/**/rollout-*.jsonl
        └─ <your agent here>     implement HistorySource
 ```
 
