@@ -168,11 +168,15 @@ export class OpenCodeSource implements HistorySource {
   listSessions(opts?: { limit?: number; directory?: string }): Session[] {
     const limit = opts?.limit ?? 30;
     const dir = opts?.directory;
+    // Only root sessions: subagent sessions (parent_id set) are folded into
+    // their parent's parts, not listed independently.
+    const where = ['parent_id IS NULL'];
+    if (dir) where.push('directory LIKE ?');
     const sql = `
       SELECT id, slug, title, directory, agent, model, cost,
              tokens_input, tokens_output, time_created, time_updated
       FROM session
-      ${dir ? 'WHERE directory LIKE ?' : ''}
+      WHERE ${where.join(' AND ')}
       ORDER BY time_updated DESC
       LIMIT ?`;
     const stmt = this.getDb().prepare(sql);
@@ -184,14 +188,25 @@ export class OpenCodeSource implements HistorySource {
   }
 
   loadParts(sessionId?: string): Part[] {
+    // Fold subagents into their parent: a session's parts include its own parts
+    // plus the parts of any session whose parent_id points back at it. The
+    // owning (root) session id is computed as COALESCE(s.parent_id, s.id) so a
+    // subagent's parts are attributed to the parent.
+    // LEFT JOIN owner so orphan subagents (parent_id → missing session) still
+    // surface their parts instead of being dropped; fall back to their own
+    // slug/directory when the parent row is absent.
     const sql = `
       SELECT p.id, p.session_id, p.time_created, p.data,
              json_extract(m.data, '$.role') AS role,
-             s.slug, s.directory
+             s.parent_id AS parent_id, s.agent AS agent,
+             COALESCE(owner.id, s.id) AS owner_id,
+             COALESCE(owner.slug, s.slug) AS owner_slug,
+             COALESCE(owner.directory, s.directory) AS owner_directory
       FROM part p
       JOIN message m ON m.id = p.message_id
       JOIN session s ON s.id = p.session_id
-      ${sessionId ? 'WHERE p.session_id = ?' : ''}
+      LEFT JOIN session owner ON owner.id = s.parent_id
+      ${sessionId ? 'WHERE COALESCE(owner.id, s.id) = ?' : ''}
       ORDER BY p.time_created ASC`;
     const stmt = this.getDb().prepare(sql);
     const rows = (sessionId ? stmt.all(sessionId) : stmt.all()) as unknown as Record<
@@ -209,15 +224,18 @@ export class OpenCodeSource implements HistorySource {
       }
       const ex = extractPart(data);
       if (!ex) continue;
+      const ownerId = row.owner_id as string;
+      const isSubagent = !!row.parent_id;
+      const label = isSubagent ? `[subagent ${(row.agent as string) || 'agent'}] ` : '';
       out.push({
         id: row.id as string,
-        sessionId: row.session_id as string,
-        sessionSlug: (row.slug as string) || (row.session_id as string).slice(0, 12),
+        sessionId: ownerId,
+        sessionSlug: (row.owner_slug as string) || ownerId.slice(0, 12),
         role: ((row.role as string) || 'assistant') as Role,
         kind: ex.kind,
         toolName: ex.toolName,
-        content: ex.content,
-        directory: (row.directory as string) || undefined,
+        content: label + ex.content,
+        directory: (row.owner_directory as string) || undefined,
         timeCreated: row.time_created as number,
         source: NAME,
       });
@@ -287,14 +305,16 @@ export class OpenCodeSource implements HistorySource {
       const r = this.listSessions({ limit: 1 });
       return r.length ? r[0].id : null;
     }
+    // Resolve to the OWNING (root) session: COALESCE(parent_id, id) maps a
+    // subagent selector to its parent, leaving root selectors unchanged.
     const stmt = this.getDb().prepare(`
-      SELECT id FROM session
+      SELECT COALESCE(parent_id, id) AS owner_id FROM session
       WHERE id = ? OR slug = ? OR id LIKE ? OR slug LIKE ?
       ORDER BY time_updated DESC LIMIT 1`);
     const r = stmt.get(selector, selector, `${selector}%`, `${selector}%`) as
-      | { id: string }
+      | { owner_id: string }
       | undefined;
-    return r ? r.id : null;
+    return r ? r.owner_id : null;
   }
 
   loadTodos(sessionId: string): Todo[] {
