@@ -18,7 +18,8 @@ can check history *before* doing fresh research.
   (`~/.claude/projects/*.jsonl`) out of the box, plus additional locally
   detected agents. Pluggable: add a new agent by implementing one interface.
 - **Project- or global-scoped.** Searches default to the current project
-  (current directory and below); `--global` widens to everything.
+  (current directory and below, plus sibling git worktrees of the same repo);
+  `--global` widens to everything, `--no-worktrees` narrows to one directory.
 - **Read-only.** Never modifies any data store.
 - **Context-friendly.** Plain, pipe-friendly output. Agents page with
   `grep`/`head`/`wc`/`jq` instead of dumping whole sessions into context.
@@ -222,10 +223,13 @@ ochist grep "docker build" --source opencode
 ### Project vs global scope
 
 `sessions` and `grep` default to the **current project** — sessions whose
-working directory is the current dir or below. Widen as needed:
+working directory is the current dir or below. Sibling **git worktrees** of the
+same repo are folded in automatically, so a session run in a linked worktree is
+visible from the main checkout (and vice versa). Adjust as needed:
 
 ```bash
-ochist sessions                 # current project (cwd and subdirs)
+ochist sessions                 # current project (cwd, subdirs, sibling worktrees)
+ochist sessions --no-worktrees  # strict: this directory only
 ochist sessions --global        # every project
 ochist sessions --dir ~/code/x  # a specific directory
 ochist grep "ssh" --global      # search all history
