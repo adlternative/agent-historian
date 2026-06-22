@@ -106,9 +106,10 @@ ochist show latest --role assistant | head -30
   prefer them for a quick, cheap overview.
 - `grep` returns one representative line + a `part_id`; follow up with
   `ochist part <part_id>` for full text.
-- Subagents are included automatically: OpenCode subagents are their own
-  sessions (the `agent` field shows `explore`/`general`); Claude Code subagent
-  output is folded into its parent session and prefixed with `[subagent …]`.
+- Subagents are folded into their parent session (not listed separately):
+  OpenCode (via `parent_id`), Codex (via `parent_thread_id`), and Claude Code
+  subagent output all appear inside the parent's parts, prefixed with
+  `[subagent …]`. A subagent id/slug resolves to its parent.
 - Use `--json | jq` for machine parsing.
 - If `ochist` is not on PATH, invoke via:
   `node <repo>/dist/cli.js <args>`.

@@ -260,7 +260,7 @@ ochist (CLI)
 
 每个数据源把各自 Agent 的数据归一化为统一的 `Session` / `Part` 结构，因此 CLI 与具体 Agent 无关。搜索是词法匹配（对消息内容做正则/子串匹配）——没有向量、没有索引、没有后台进程。
 
-**Subagent 按各 Agent 的方式分别处理。** OpenCode 的 subagent 记录为各自独立的会话（`agent` 字段为 `explore`/`general`/……）。Claude Code 的 subagent 记录在引用其父会话的 `agent-*.jsonl` 文件中；`agent-historian` 会把它们的内容并入父会话，并以 `[subagent …]` 前缀标注，从而既不丢失也不重复。
+**Subagent 会被折叠进其父会话。** 各 Agent 的 subagent 对话都会并入父会话的 parts（以 `[subagent …]` 前缀标注）并按时间交错，而不是作为独立的顶层条目堆在会话列表里。父子关系取自各 Agent 自身的元数据：OpenCode 的 `session.parent_id`、Codex 的 `parent_thread_id`、Claude Code 的 `agent-*.jsonl`（sidechain）文件。解析一个 subagent id 会返回其父会话，从而既不丢失也不重复。
 
 ---
 

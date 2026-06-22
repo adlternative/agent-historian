@@ -347,11 +347,13 @@ Each source normalizes its agent's data into common `Session` / `Part` shapes,
 so the CLI is agent-agnostic. Search is lexical (regex/substring over message
 content) — no embeddings, no index, no background process.
 
-**Subagents are handled per agent.** OpenCode subagents are recorded as their
-own sessions (the `agent` field is `explore`/`general`/…). Claude Code subagent
-("sidechain") transcripts live in `agent-*.jsonl` files that reference their
-parent session; `agent-historian` folds their content into the parent session
-and prefixes it with `[subagent …]`, so nothing is lost or duplicated.
+**Subagents are folded into their parent session.** Across agents, subagent
+conversations are merged into the parent's parts (prefixed with `[subagent …]`)
+and interleaved by time, rather than cluttering the session list as separate
+top-level entries. The parent link is taken from each agent's own metadata:
+OpenCode's `session.parent_id`, Codex's `parent_thread_id`, and Claude Code's
+`agent-*.jsonl` ("sidechain") files. Resolving a subagent id returns its parent,
+so nothing is lost or duplicated.
 
 ---
 
