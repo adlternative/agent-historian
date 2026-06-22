@@ -1,6 +1,6 @@
 {
   "name": "agent-historian",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Search and read past AI coding-agent conversation history (OpenCode, Claude Code, …) from the command line. Pluggable per-agent sources.",
   "type": "module",
   "bin": {
