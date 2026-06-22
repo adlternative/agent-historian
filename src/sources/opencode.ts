@@ -5,6 +5,10 @@
  * `~/.local/share/opencode/opencode.db`) using Node's built-in
  * `node:sqlite` (Node >= 22.5) — zero native dependencies.
  *
+ * `node:sqlite` is only available on Node >= 22.5, so it is loaded lazily
+ * via `require('node:sqlite')`. On older Node this source simply reports
+ * itself as unavailable; every other (plain-text) source keeps working.
+ *
  * Schema (relevant tables):
  *   session(id, slug, title, directory, agent, model, cost,
  *           tokens_input, tokens_output, time_created, time_updated, …)
@@ -12,10 +16,10 @@
  *   part(id, message_id, session_id, time_created, data)
  *        -- data.type: text | tool | patch | step-start | step-finish
  */
-import { DatabaseSync } from 'node:sqlite';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 
 import {
   HistorySource,
@@ -27,6 +31,36 @@ import {
 } from './types.js';
 
 const NAME = 'opencode';
+
+/** Minimal shape of node:sqlite's DatabaseSync that this source uses. */
+interface SqliteStatement {
+  all(...params: unknown[]): unknown[];
+  get(...params: unknown[]): unknown;
+}
+interface SqliteDatabase {
+  prepare(sql: string): SqliteStatement;
+}
+interface SqliteModule {
+  DatabaseSync: new (path: string, opts?: { readOnly?: boolean }) => SqliteDatabase;
+}
+
+const require = createRequire(import.meta.url);
+
+/**
+ * Lazily load `node:sqlite`. Returns null on Node versions that don't ship
+ * it (so the OpenCode source can degrade gracefully instead of crashing the
+ * whole CLI at import time). The result is cached.
+ */
+let sqliteModule: SqliteModule | null | undefined;
+function loadSqlite(): SqliteModule | null {
+  if (sqliteModule !== undefined) return sqliteModule;
+  try {
+    sqliteModule = require('node:sqlite') as SqliteModule;
+  } catch {
+    sqliteModule = null;
+  }
+  return sqliteModule;
+}
 
 function dbPath(): string {
   if (process.env.OPENCODE_DB_PATH) return process.env.OPENCODE_DB_PATH;
@@ -82,23 +116,35 @@ export class OpenCodeSource implements HistorySource {
   readonly name = NAME;
   readonly label = 'OpenCode';
 
-  private db: DatabaseSync | null = null;
+  private db: SqliteDatabase | null = null;
 
   isAvailable(): boolean {
-    return existsSync(dbPath());
+    // Requires both the database file and a Node that ships node:sqlite.
+    return existsSync(dbPath()) && loadSqlite() !== null;
   }
 
   location(): string {
-    return dbPath();
+    const path = dbPath();
+    if (loadSqlite() === null) {
+      return `${path} (needs Node >= 22.5 for node:sqlite)`;
+    }
+    return path;
   }
 
-  private getDb(): DatabaseSync {
+  private getDb(): SqliteDatabase {
     if (this.db) return this.db;
+    const sqlite = loadSqlite();
+    if (!sqlite) {
+      throw new Error(
+        'OpenCode source requires the built-in node:sqlite module (Node >= 22.5). ' +
+          'Upgrade Node, or use the other sources.',
+      );
+    }
     const path = dbPath();
     if (!existsSync(path)) {
       throw new Error(`OpenCode database not found at ${path}. Set OPENCODE_DB_PATH to override.`);
     }
-    this.db = new DatabaseSync(path, { readOnly: true });
+    this.db = new sqlite.DatabaseSync(path, { readOnly: true });
     return this.db;
   }
 

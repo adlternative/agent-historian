@@ -23,8 +23,10 @@ can check history *before* doing fresh research.
 - **Read-only.** Never modifies any data store.
 - **Context-friendly.** Plain, pipe-friendly output. Agents page with
   `grep`/`head`/`wc`/`jq` instead of dumping whole sessions into context.
-- **Zero runtime dependencies.** Uses Node's built-in `node:sqlite`
-  (Node ≥ 22.5). No native modules.
+- **Zero runtime dependencies.** No native modules. Runs on **Node ≥ 18**;
+  the OpenCode source additionally needs **Node ≥ 22.5** (built-in
+  `node:sqlite`) and degrades gracefully to "unavailable" on older Node while
+  every other source keeps working.
 
 ---
 
@@ -198,7 +200,9 @@ npm link          # symlink `ochist` globally
 ```
 </details>
 
-Requires **Node ≥ 22.5** (for built-in `node:sqlite`).
+Requires **Node ≥ 18**. The OpenCode source needs **Node ≥ 22.5** (built-in
+`node:sqlite`); on older Node it reports as unavailable and the other sources
+still work.
 
 ---
 
