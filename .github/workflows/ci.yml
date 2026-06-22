@@ -9,6 +9,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 18: minimum supported (node:sqlite absent → OpenCode source degrades).
+        # 22/24: node:sqlite present (OpenCode source active).
+        node-version: ['18', '20', '22', '24']
+
+    name: build (Node ${{ matrix.node-version }})
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -16,7 +24,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: '22'
+          node-version: ${{ matrix.node-version }}
 
       - name: Install dependencies
         run: npm ci
@@ -26,3 +34,21 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Smoke test: the CLI must run on every supported Node version without
+      # crashing — in particular on Node 18, where node:sqlite is unavailable
+      # and the OpenCode source must degrade gracefully instead of throwing.
+      # These commands exit 0 even with no agent data present (as on CI).
+      - name: Smoke test (--help)
+        run: node dist/cli.js --help
+
+      - name: Smoke test (sources)
+        run: |
+          out="$(node dist/cli.js sources)"
+          echo "$out"
+          # Degradation path must be exercised: the OpenCode source is always
+          # listed (available or not) — if it crashed, this line is missing.
+          echo "$out" | grep -q opencode
+
+      - name: Smoke test (sessions --global)
+        run: node dist/cli.js sessions --global
