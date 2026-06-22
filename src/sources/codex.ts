@@ -20,6 +20,12 @@
  *
  * Codex has no session slug/title, so we derive a slug from the session id
  * and a title from the first user message.
+ *
+ * Subagents: Codex spawns subagents as their own rollout files whose
+ * session_meta carries `parent_thread_id` (+ `thread_source: "subagent"` and
+ * an `agent_nickname`). These are hidden from `listSessions` and folded into
+ * their parent session's parts with a `[subagent <nickname>]` prefix, so a
+ * parent session shows the full picture (matching the Claude Code source).
  */
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -182,6 +188,64 @@ export class CodexSource implements HistorySource {
     return sessionsDir();
   }
 
+  /**
+   * Read just the session_meta of a file: id, cwd, parent thread (set for
+   * subagents) and the subagent nickname/role. Cheap-ish (parses lines until
+   * session_meta is found, which is the first line).
+   */
+  private fileMeta(
+    path: string,
+  ): { id: string; cwd?: string; parentId?: string; nickname?: string; role?: string } | null {
+    const lines = this.readLines(path);
+    const meta = lines.find((l) => l.type === 'session_meta');
+    const p = meta?.payload;
+    if (!p || typeof p.id !== 'string') return null;
+    return {
+      id: p.id,
+      cwd: typeof p.cwd === 'string' ? p.cwd : undefined,
+      parentId: typeof p.parent_thread_id === 'string' ? p.parent_thread_id : undefined,
+      nickname: typeof p.agent_nickname === 'string' ? p.agent_nickname : undefined,
+      role: typeof p.agent_role === 'string' ? p.agent_role : undefined,
+    };
+  }
+
+  /** Enumerate every file with its parsed meta (id/parent/nickname) and mtime. */
+  private allFileMeta(): {
+    path: string;
+    mtime: number;
+    id: string;
+    cwd?: string;
+    parentId?: string;
+    nickname?: string;
+    role?: string;
+  }[] {
+    const out: {
+      path: string;
+      mtime: number;
+      id: string;
+      cwd?: string;
+      parentId?: string;
+      nickname?: string;
+      role?: string;
+    }[] = [];
+    for (const f of this.allFiles()) {
+      const m = this.fileMeta(f.path);
+      if (!m) continue;
+      out.push({ path: f.path, mtime: f.mtime, ...m });
+    }
+    return out;
+  }
+
+  /** Subagent files whose parent_thread_id points at the given session id. */
+  private subagentFiles(parentId: string): {
+    path: string;
+    nickname?: string;
+  }[] {
+    return this.allFileMeta()
+      .filter((f) => f.parentId === parentId)
+      .map((f) => ({ path: f.path, nickname: f.nickname }));
+  }
+
   /** Recursively enumerate rollout-*.jsonl files with their mtime. */
   private allFiles(): { path: string; mtime: number }[] {
     const root = sessionsDir();
@@ -286,7 +350,9 @@ export class CodexSource implements HistorySource {
     const limit = opts?.limit ?? 30;
     const dir = opts?.directory;
     const sessions: Session[] = [];
-    for (const f of this.allFiles()) {
+    for (const f of this.allFileMeta()) {
+      // Skip subagent transcripts — they're folded into their parent session.
+      if (f.parentId) continue;
       const s = this.sessionFromFile(f.path, f.mtime);
       if (!s) continue;
       if (dir && !s.directory.includes(dir)) continue;
@@ -296,42 +362,69 @@ export class CodexSource implements HistorySource {
     return sessions.slice(0, limit);
   }
 
-  loadParts(sessionId?: string): Part[] {
-    const targets = sessionId
-      ? (() => {
-          const p = this.fileForSession(sessionId);
-          return p ? [p] : [];
-        })()
-      : this.allFiles().map((f) => f.path);
+  /**
+   * Turn one file's response_item lines into Parts, attributed to `ownerId`.
+   * Subagent parts get a `[subagent <nickname>]` content prefix and keep their
+   * own file id in the part id so they remain individually addressable.
+   */
+  private partsFromFile(
+    path: string,
+    ownerId: string,
+    isSubagent = false,
+    subagentNickname?: string,
+  ): Part[] {
+    const lines = this.readLines(path);
+    const meta = lines.find((l) => l.type === 'session_meta');
+    const fileId = (meta?.payload?.id as string) || ownerId;
+    const cwd = (meta?.payload?.cwd as string) || undefined;
+    const slug = ownerId.slice(0, 8);
+    const label = isSubagent
+      ? `[subagent ${subagentNickname || fileId.slice(0, 8)}] `
+      : '';
 
     const out: Part[] = [];
-    for (const path of targets) {
-      const lines = this.readLines(path);
-      // Resolve this file's canonical session id from its session_meta line.
-      const meta = lines.find((l) => l.type === 'session_meta');
-      const id = (meta?.payload?.id as string) || '';
-      if (!id) continue;
-      const slug = id.slice(0, 8);
-      const cwd = (meta?.payload?.cwd as string) || undefined;
-
-      lines.forEach((l, i) => {
-        if (l.type !== 'response_item' || !l.payload) return;
-        const ex = extractPart(l.payload);
-        if (!ex) return;
-        out.push({
-          id: `${id}:${i}`,
-          sessionId: id,
-          sessionSlug: slug,
-          role: ex.role,
-          kind: ex.kind,
-          toolName: ex.toolName,
-          content: ex.content,
-          directory: cwd,
-          timeCreated: tsToMs(l.timestamp),
-          source: NAME,
-        });
+    lines.forEach((l, i) => {
+      if (l.type !== 'response_item' || !l.payload) return;
+      const ex = extractPart(l.payload);
+      if (!ex) return;
+      out.push({
+        id: `${fileId}:${i}`,
+        sessionId: ownerId,
+        sessionSlug: slug,
+        role: ex.role,
+        kind: ex.kind,
+        toolName: ex.toolName,
+        content: label + ex.content,
+        directory: cwd,
+        timeCreated: tsToMs(l.timestamp),
+        source: NAME,
       });
+    });
+    return out;
+  }
+
+  loadParts(sessionId?: string): Part[] {
+    const out: Part[] = [];
+
+    if (sessionId) {
+      const parentPath = this.fileForSession(sessionId);
+      if (parentPath) out.push(...this.partsFromFile(parentPath, sessionId));
+      // Fold in any subagents spawned by this session.
+      for (const sub of this.subagentFiles(sessionId)) {
+        out.push(...this.partsFromFile(sub.path, sessionId, true, sub.nickname));
+      }
+    } else {
+      // No session filter: every parent file plus its subagents, each part
+      // attributed to its parent session id.
+      for (const f of this.allFileMeta()) {
+        if (f.parentId) continue; // subagents handled under their parent
+        out.push(...this.partsFromFile(f.path, f.id));
+        for (const sub of this.subagentFiles(f.id)) {
+          out.push(...this.partsFromFile(sub.path, f.id, true, sub.nickname));
+        }
+      }
     }
+
     out.sort((a, b) => a.timeCreated - b.timeCreated);
     return out;
   }
@@ -377,7 +470,12 @@ export class CodexSource implements HistorySource {
     const exact = sessions.find((s) => s.id === selector);
     if (exact) return exact.id;
     const pref = sessions.find((s) => s.id.startsWith(selector) || s.slug === selector);
-    return pref ? pref.id : null;
+    if (pref) return pref.id;
+    // A subagent id/prefix resolves to its parent session.
+    const sub = this.allFileMeta().find(
+      (f) => f.parentId && (f.id === selector || f.id.startsWith(selector)),
+    );
+    return sub?.parentId ?? null;
   }
 
   loadTodos(): Todo[] {
