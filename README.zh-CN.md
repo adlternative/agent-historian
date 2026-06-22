@@ -12,8 +12,7 @@
 [OpenCode](https://opencode.ai)、[Claude Code](https://www.anthropic.com/claude-code)
 等 Agent 在做新调研*之前*先查历史。
 
-- **多 Agent 支持。** 开箱即读 OpenCode（`opencode.db`）和 Claude Code
-  （`~/.claude/projects/*.jsonl`），以及其他本地探测到的 Agent。可插拔：实现一个接口即可新增 Agent。
+- **多 Agent 支持。** 开箱即读 OpenCode（`opencode.db`）、Claude Code（`~/.claude/projects/*.jsonl`）、Qoder、Codex CLI（`~/.codex/sessions/**/rollout-*.jsonl`），以及其他本地探测到的 Agent。可插拔：实现一个接口即可新增 Agent。
 - **项目级 / 全局级范围。** 搜索默认限定在当前项目（当前目录及其子目录，以及同仓库的其它 git worktree）；`--global` 扩展到全部，`--no-worktrees` 收窄到单一目录。
 - **只读。** 绝不修改任何数据存储。
 - **对上下文友好。** 纯文本、管道友好的输出。Agent 用
@@ -254,6 +253,8 @@ ochist (CLI)
   └─ sources/registry.ts        选择活跃的数据源（自动探测或 --source）
        ├─ OpenCodeSource        通过 node:sqlite 读取 opencode.db
        ├─ ClaudeCodeSource      读取 ~/.claude/projects/*.jsonl
+       ├─ QoderSource           读取 ~/.qoder/projects/**/*.jsonl
+       ├─ CodexSource           读取 ~/.codex/sessions/**/rollout-*.jsonl
        └─ <你的 Agent>          实现 HistorySource 接口
 ```
 
