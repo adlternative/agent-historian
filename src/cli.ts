@@ -20,6 +20,7 @@
  *
  * <session>/<part_id> accept agent-native ids, slugs/prefixes, or "latest".
  */
+import './quiet-warnings.js'; // must run before node:sqlite is loaded
 import { ALL_SOURCES, selectSources } from './sources/registry.js';
 import { HistorySource, Part, Session } from './sources/types.js';
 import { installSkill, uninstallSkill, skillPath } from './skill-install.js';
