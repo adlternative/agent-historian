@@ -48,3 +48,50 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+
+      # Update the Homebrew tap (adlternative/homebrew-tap) so
+      # `brew install adlternative/tap/agent-historian` tracks this release.
+      # Requires a PAT with `repo` (or contents:write) on the tap repo,
+      # stored as the TAP_GITHUB_TOKEN secret. Skipped if the secret is absent
+      # (secrets can't be read in an `if:`, so we guard inside the script).
+      - name: Update Homebrew tap
+        env:
+          TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TAP_GITHUB_TOKEN:-}" ]; then
+            echo "TAP_GITHUB_TOKEN not set; skipping Homebrew tap update."
+            exit 0
+          fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          TARBALL="https://registry.npmjs.org/agent-historian/-/agent-historian-${VERSION}.tgz"
+
+          # npm registry is eventually consistent; retry until the new tarball is fetchable.
+          for i in 1 2 3 4 5 6; do
+            if curl -fsSL "$TARBALL" -o pkg.tgz; then break; fi
+            echo "tarball not ready yet (attempt $i), retrying in 10s…"
+            sleep 10
+          done
+          SHA256="$(shasum -a 256 pkg.tgz | awk '{print $1}')"
+          echo "version=$VERSION sha256=$SHA256"
+
+          git clone "https://x-access-token:${TAP_GITHUB_TOKEN}@github.com/adlternative/homebrew-tap.git" tap
+          FORMULA="tap/Formula/agent-historian.rb"
+
+          # Replace the url and sha256 lines in place.
+          sed -i.bak -E \
+            -e "s|^(  url \").*(\")|\1${TARBALL}\2|" \
+            -e "s|^(  sha256 \").*(\")|\1${SHA256}\2|" \
+            "$FORMULA"
+          rm -f "$FORMULA.bak"
+
+          cd tap
+          if git diff --quiet; then
+            echo "Formula already up to date; nothing to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/agent-historian.rb
+          git commit -m "agent-historian ${VERSION}"
+          git push origin HEAD:main
