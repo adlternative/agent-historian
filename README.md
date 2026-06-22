@@ -182,6 +182,12 @@ skill — that's a fine reason for it to stick around too.)
 npm install -g agent-historian      # exposes the `ochist` command
 ```
 
+Or with Homebrew:
+
+```bash
+brew install adlternative/tap/agent-historian
+```
+
 Or run without installing:
 
 ```bash
