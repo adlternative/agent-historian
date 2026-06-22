@@ -22,6 +22,9 @@
  */
 import './quiet-warnings.js'; // must run before node:sqlite is loaded
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ALL_SOURCES, selectSources } from './sources/registry.js';
 import { HistorySource, Part, Session } from './sources/types.js';
 import { installSkill, uninstallSkill, skillPath } from './skill-install.js';
@@ -71,6 +74,18 @@ const str = (v: string | boolean | undefined): string | undefined =>
   typeof v === 'string' ? v : undefined;
 
 // ── helpers ─────────────────────────────────────────────────────────
+
+/** Read the package version from the bundled package.json (dist/ or src/). */
+function pkgVersion(): string {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    // dist/cli.js → ../package.json ; src/cli.ts → ../package.json
+    const raw = readFileSync(join(here, '..', 'package.json'), 'utf8');
+    return (JSON.parse(raw) as { version?: string }).version ?? 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
 
 const fmtTime = (ms: number): string =>
   ms ? new Date(ms).toISOString().replace('T', ' ').slice(0, 19) : '?';
@@ -465,6 +480,7 @@ Usage:
       Local usage summary: how often ochist was invoked (metadata only,
       no query text). Opt out with AGENT_HISTORIAN_NO_TELEMETRY=1.
 
+  ochist --version | -v
   ochist --help
 
 <session>/<part_id> accept: agent id, slug/prefix, or "latest".
@@ -505,6 +521,10 @@ function cmdSkill(args: Args): void {
 
 function main(): void {
   const argv = process.argv.slice(2);
+  if (argv.includes('--version') || argv.includes('-v')) {
+    process.stdout.write(pkgVersion() + '\n');
+    return;
+  }
   if (argv.length === 0 || argv.includes('--help') || argv.includes('-h')) {
     process.stdout.write(HELP);
     return;
