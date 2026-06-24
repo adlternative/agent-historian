@@ -75,6 +75,12 @@ AI 编码 Agent **大多在会话之间是无状态的**。每开一个新会话
 - **只读**——它从不写“记忆”，因此不会偏离或污染真实来源。
 - **渐进式披露**——不是把摘要塞进上下文，而是让 Agent 分页浏览结果（`定位 → 概览 → 扫描 → 阅读`），只取它需要的确切行。
 
+### 一个殊途同归的判断：session 不等于上下文窗口
+
+Anthropic 的 [Managed Agents](https://www.anthropic.com/engineering/managed-agents) 一文，从另一个角度论证了同样的底层原则，对应其中 *"The session is not Claude's context window"* 一节。他们的观点是：compaction、memory 工具这类做法，是在对"保留什么"做**不可逆的决策**，而*"你很难预知未来的对话轮次会需要哪些 token"*。他们的解法是把上下文作为一个**活在上下文窗口之外的对象**——一份持久的 session log，Agent 通过 `getEvents()` 按需检索：对事件流做位置切片、回退几步看清前因、或在某个动作前重读上下文。
+
+这和 `agent-historian` 的 `定位 → 概览 → 扫描 → 阅读` 是同一个形状：真实文本活在磁盘上，Agent 在需要时拉取确切的切片，而不是依赖一份有损的摘要。**原则相同，范围不同**：Managed Agents 是自己写入、再读回 append-only 日志，用于扛住**单个长周期任务**；`agent-historian` 则是**只读那些已经落盘的会话记录**，跨**历史会话、跨多个 Agent**。两个从相反方向出发的设计——一个在托管 harness 内部，一个是本地 CLI——落到了同一个结论：别预先决定要忘掉什么，把地面真相留着、可检索，让 Agent 自己读它需要的部分。
+
 ---
 
 ## 为什么用 CLI + Skill 而不是 MCP server
