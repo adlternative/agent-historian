@@ -122,6 +122,27 @@ historian for exact recall, a memory layer for distilled facts.
   agent pages through results (`locate → orient → scan → read`) and pulls only
   the exact lines it needs.
 
+### A converging idea: the session is not the context window
+
+Anthropic's [Managed Agents](https://www.anthropic.com/engineering/managed-agents)
+post argues the same underlying principle from a different angle, in the section
+*"The session is not Claude's context window."* Their point: techniques like
+compaction and memory tools make **irreversible decisions about what to keep**,
+and *"it is difficult to know which tokens the future turns will need."* Their
+fix is to keep context as an **object that lives outside the context window** — a
+durable session log the agent interrogates on demand via `getEvents()`, slicing
+the stream, rewinding to see the lead-up, or rereading before a specific action.
+
+That is the same shape as `agent-historian`'s `locate → orient → scan → read`:
+the real text lives on disk, and the agent pulls exact slices when it needs them
+rather than relying on a lossy summary. The principle is shared; the scope
+differs. Managed Agents writes and reads its own append-only log to survive a
+**single long-horizon task**; `agent-historian` is **read-only over transcripts
+that already exist**, across **past sessions and multiple agents**. Convergent
+designs from opposite ends — one inside a hosted harness, one a local CLI —
+landing on the same conclusion: don't pre-decide what to forget; keep the ground
+truth retrievable and let the agent read what it needs.
+
 ---
 
 ## Why CLI + Skill instead of an MCP server
